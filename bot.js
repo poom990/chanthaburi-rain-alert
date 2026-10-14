@@ -114,7 +114,9 @@ function buildRainCheckReply(analysis, locationName) {
       const icon = item.prob >= 60 ? '🌧️' : item.prob >= 40 ? '🌦️' : '⛅';
       msg += `  ${icon} ${item.time} น. → ${item.prob}% (${item.precip} มม.)\n`;
     });
-    msg += `\n📢 เตรียมผ้าใบหน้าร้านด้วยนะครับ!\n`;
+    msg += `\n📢 เตรียมผ้าใบหน้าร้านด้วยนะครับ!\n\n` +
+           `🌐 ลิงก์เรดาร์กรมอุตุฯ สด:\n` +
+           `👉 https://weather.tmd.go.th/ryg240Loop.php\n`;
   } else {
     msg += `☀️ [สภาพอากาศ] ${locationName}\n`;
     msg += `🕒 ตรวจวัด ณ ${now} น.\n`;
@@ -123,10 +125,11 @@ function buildRainCheckReply(analysis, locationName) {
     msg += `• โอกาสฝน: ${analysis.maxProb}% (ต่ำมาก)\n`;
     msg += `• อุณหภูมิ: ${analysis.currentTemp}°C\n`;
     msg += `• ความชื้น: ${analysis.currentHumidity}%\n\n`;
-    msg += `ค้าขายได้สบายใจครับ! 👍`;
+    msg += `ค้าขายได้สบายใจครับ! 👍\n\n` +
+           `🌐 ลิงก์เรดาร์กรมอุตุฯ: https://weather.tmd.go.th/ryg.php\n`;
   }
 
-  msg += `\n━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `📡 ข้อมูล: ECMWF / กรมอุตุนิยมวิทยา`;
   return msg;
 }
@@ -262,7 +265,18 @@ async function handleMessage(event) {
       replyMessage(replyToken, [
         {
           type: "text",
-          text: `📡 ภาพเรดาร์ตรวจฝนสด จ.จันทบุรี\n🕒 ณ เวลา ${now} น.\n━━━━━━━━━━━━━━━━━━━━\n🟩 เขียว = ฝนเบา | 🟨 เหลือง = ฝนปานกลาง\n🟥 แดง = ฝนหนัก + ลมแรง ⚠️\n\nข้อมูลจากสถานีเรดาร์ กรมอุตุนิยมวิทยา`
+          text: `📡 [ภาพเรดาร์ตรวจฝนสด กรมอุตุนิยมวิทยา]\n` +
+                `📍 สถานีเรดาร์ตรวจอากาศระยอง-จันทบุรี\n` +
+                `🕒 เวลาไทยปัจจุบัน: ${now} น.\n` +
+                `━━━━━━━━━━━━━━━━━━━━\n` +
+                `💡 วิธีดูภาพเรดาร์:\n` +
+                `• มุมขวาบนในภาพระบุเวลาสากล UTC (+7 ชม. = เวลาไทย)\n` +
+                `• 🟩 เขียว = ฝนเบา/ละออง\n` +
+                `• 🟨 เหลือง = ฝนปานกลาง\n` +
+                `• 🟧🟥 ส้ม/แดง = ฝนตกหนักมาก + ลมแรง ⚠️\n\n` +
+                `🌐 ลิงก์ตรงหน้าเรดาร์กรมอุตุฯ (ดูภาพเคลื่อนไหว):\n` +
+                `👉 https://weather.tmd.go.th/ryg240Loop.php\n` +
+                `👉 https://weather.tmd.go.th/ryg.php`
         },
         { type: "image", originalContentUrl: RADAR_URL, previewImageUrl: RADAR_URL }
       ]);
