@@ -61,7 +61,8 @@ function fetchWeather(lat, lon) {
 }
 
 // ==========================================
-// วิเคราะห์สภาพอากาศ
+// วิเคราะห์สภาพอากาศ (อิงเวลาประเทศไทย Asia/Bangkok 100%)
+// คำนวณเฉพาะ "ชั่วโมงข้างหน้าในอนาคต" เท่านั้น ไม่เอาอดีตมาปน
 // ==========================================
 function analyzeWeather(data) {
   const hourly = data.hourly;
@@ -72,34 +73,45 @@ function analyzeWeather(data) {
   const humidities = hourly.relativehumidity_2m;
   const winds = hourly.windspeed_10m;
 
-  const currentHour = new Date().getHours();
-  const currentTemp = temps[currentHour] || 0;
-  const currentHumidity = humidities[currentHour] || 0;
-  const currentWind = winds[currentHour] || 0;
+  // แปลงเวลาให้เป็นเวลาไทยแท้ๆ แม้รันบน Cloud ต่างประเทศ
+  const thNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+  const thHour = thNow.getHours();
+  const thDateStr = thNow.toISOString().split('T')[0];
+  const currentSlotStr = `${thDateStr}T${String(thHour).padStart(2, '0')}:00`;
+
+  // หา index ของชั่วโมงปัจจุบันในชุดข้อมูล
+  let currentIndex = times.findIndex(t => t >= currentSlotStr);
+  if (currentIndex === -1) currentIndex = 0;
+
+  const currentTemp = temps[currentIndex] || 0;
+  const currentHumidity = humidities[currentIndex] || 0;
+  const currentWind = winds[currentIndex] || 0;
 
   let maxProb = 0;
   let maxPrecip = 0;
   let willRain = false;
   let timeline = [];
 
-  for (let i = currentHour; i < Math.min(currentHour + 4, times.length); i++) {
-    const prob = rainProbs[i];
-    const precip = precips[i];
+  // เริ่มดูตั้งแต่ชั่วโมงถัดไปข้างหน้า (currentIndex + 1) จำนวน 3-4 ชั่วโมงในอนาคต
+  for (let i = currentIndex + 1; i <= Math.min(currentIndex + 4, times.length - 1); i++) {
+    const prob = rainProbs[i] || 0;
+    const precip = precips[i] || 0;
     if (prob > maxProb) maxProb = prob;
     if (precip > maxPrecip) maxPrecip = precip;
     if (prob >= 40 || precip >= 0.5) willRain = true;
-    timeline.push({ time: times[i].split('T')[1], prob, precip });
+
+    const timeSlot = times[i].split('T')[1]; // ดึงเฉพาะเวลา เช่น "13:00"
+    timeline.push({ time: timeSlot, prob, precip });
   }
 
-  return { willRain, maxProb, maxPrecip, currentTemp, currentHumidity, currentWind, timeline };
+  return { willRain, maxProb, maxPrecip, currentTemp, currentHumidity, currentWind, timeline, thNow };
 }
 
 // ==========================================
 // สร้างข้อความตอบกลับสำหรับ "เช็กฝน" หรือ "ฝนตกไหม"
 // ==========================================
 function buildRainCheckReply(analysis, locationName) {
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  const timeStr = analysis.thNow.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
   let msg = '';
 
   if (analysis.willRain) {
