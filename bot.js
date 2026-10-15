@@ -98,39 +98,61 @@ function analyzeWeather(data) {
 // สร้างข้อความตอบกลับสำหรับ "เช็กฝน" หรือ "ฝนตกไหม"
 // ==========================================
 function buildRainCheckReply(analysis, locationName) {
-  const now = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
   let msg = '';
 
   if (analysis.willRain) {
-    msg += `🌧️ [เตือนฝน] ${locationName}\n`;
-    msg += `🕒 ตรวจวัด ณ ${now} น.\n`;
+    msg += `🌧️ [เตือนฝนรายชั่วโมง] - ${locationName}\n`;
+    msg += `🕒 เวลาที่ตรวจตอนนี้: ${timeStr} น.\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `⚠️ โอกาสฝนตกสูงสุด: ${analysis.maxProb}%\n`;
-    msg += `💧 ปริมาณน้ำฝนคาด: ${analysis.maxPrecip.toFixed(1)} มม.\n`;
-    msg += `🌡️ อุณหภูมิ: ${analysis.currentTemp}°C\n`;
-    msg += `💨 ลม: ${analysis.currentWind} กม./ชม.\n\n`;
-    msg += `📊 พยากรณ์รายชั่วโมง:\n`;
+    msg += `⚠️ สรุป: มีแนวโน้มฝนตกในอีกไม่กี่ชั่วโมงข้างหน้านี้!\n`;
+    msg += `• โอกาสฝนสูงสุด: ${analysis.maxProb}%\n`;
+    msg += `• ปริมาณน้ำฝนสูงสุด: ${analysis.maxPrecip.toFixed(1)} มม. (mm)\n`;
+    msg += `• อุณหภูมิ: ${analysis.currentTemp}°C | ลม: ${analysis.currentWind} กม./ชม.\n\n`;
+
+    msg += `🕒 โอกาสฝนในแต่ละชั่วโมงข้างหน้า:\n`;
+    let rainTimes = [];
     analysis.timeline.forEach(item => {
-      const icon = item.prob >= 60 ? '🌧️' : item.prob >= 40 ? '🌦️' : '⛅';
-      msg += `  ${icon} ${item.time} น. → ${item.prob}% (${item.precip} มม.)\n`;
+      let status = '';
+      if (item.prob >= 70) {
+        status = '🌧️ ตกค่อนข้างแน่';
+        rainTimes.push(item.time);
+      } else if (item.prob >= 40) {
+        status = '🌦️ มีโอกาสตก';
+        rainTimes.push(item.time);
+      } else {
+        status = '⛅ โอกาสน้อย/ฟ้าครึ้ม';
+      }
+      msg += ` • เวลา ${item.time} น. ➔ โอกาส ${item.prob}% (ฝน ${item.precip} มม.) [${status}]\n`;
     });
-    msg += `\n📢 เตรียมผ้าใบหน้าร้านด้วยนะครับ!\n\n` +
-           `🌐 ลิงก์เรดาร์กรมอุตุฯ สด:\n` +
-           `👉 https://weather.tmd.go.th/ryg240Loop.php\n`;
+
+    msg += `\n📢 คำแนะนำสำหรับร้านค้า:\n`;
+    if (rainTimes.length > 0) {
+      msg += `⚠️ ควรเตรียมดึงผ้าใบ/เก็บของหน้าร้านก่อนเวลา ${rainTimes[0]} น. นะครับ!\n\n`;
+    } else {
+      msg += `เตรียมผ้าใบหน้าร้านไว้เผื่อฝนตกกระทันหันนะครับ\n\n`;
+    }
+
+    msg += `🌐 ดูเรดาร์สดแบบเคลื่อนไหว:\n`;
+    msg += `👉 https://weather.tmd.go.th/ryg240Loop.php\n`;
   } else {
-    msg += `☀️ [สภาพอากาศ] ${locationName}\n`;
-    msg += `🕒 ตรวจวัด ณ ${now} น.\n`;
+    msg += `☀️ [รายงานอากาศ] - ${locationName}\n`;
+    msg += `🕒 เวลาที่ตรวจตอนนี้: ${timeStr} น.\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `✅ ไม่มีสัญญาณฝนในช่วง 3 ชม.นี้\n`;
-    msg += `• โอกาสฝน: ${analysis.maxProb}% (ต่ำมาก)\n`;
-    msg += `• อุณหภูมิ: ${analysis.currentTemp}°C\n`;
-    msg += `• ความชื้น: ${analysis.currentHumidity}%\n\n`;
-    msg += `ค้าขายได้สบายใจครับ! 👍\n\n` +
-           `🌐 ลิงก์เรดาร์กรมอุตุฯ: https://weather.tmd.go.th/ryg.php\n`;
+    msg += `✅ สบายใจได้ครับ อีก 3-4 ชั่วโมงข้างหน้านี้ไม่มีฝนตกหนัก\n\n`;
+    msg += `🕒 ตรวจสอบทีละชั่วโมง:\n`;
+    analysis.timeline.forEach(item => {
+      msg += ` • เวลา ${item.time} น. ➔ โอกาสตก ${item.prob}% (ฟ้าโปร่ง ⛅)\n`;
+    });
+    msg += `\n• อุณหภูมิปัจจุบัน: ${analysis.currentTemp}°C\n`;
+    msg += `• ความชื้นสัมพัทธ์: ${analysis.currentHumidity}%\n\n`;
+    msg += `ค้าขายหน้าร้านได้ราบรื่นตลอดช่วงนี้เลยครับแม่! 👍\n\n`;
+    msg += `🌐 ลิงก์เรดาร์กรมอุตุฯ: https://weather.tmd.go.th/ryg.php\n`;
   }
 
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-  msg += `📡 ข้อมูล: ECMWF / กรมอุตุนิยมวิทยา`;
+  msg += `📡 ข้อมูลตรวจวัดจริง: ECMWF / กรมอุตุนิยมวิทยา`;
   return msg;
 }
 
