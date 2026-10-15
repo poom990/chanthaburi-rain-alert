@@ -33,7 +33,7 @@ function fetchWeather(lat, lon) {
   });
 }
 
-// ฟังก์ชันวิเคราะห์ความเสี่ยงฝนตก
+// ฟังก์ชันวิเคราะห์ความเสี่ยงฝนตก (อิงเวลาไทย Asia/Bangkok 100% ดูอนาคตข้างหน้าเท่านั้น)
 function analyzeRain(weatherData) {
   const hourly = weatherData.hourly;
   const times = hourly.time;
@@ -42,18 +42,24 @@ function analyzeRain(weatherData) {
   const temps = hourly.temperature_2m;
   const humidities = hourly.relativehumidity_2m;
 
-  const now = new Date();
-  const currentHour = now.getHours();
+  // แปลงเวลาให้เป็นเวลาไทยแท้ๆ UTC+7 แม้รันบน GitHub Actions
+  const thNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+  const thHour = thNow.getHours();
+  const thDateStr = thNow.toISOString().split('T')[0];
+  const currentSlotStr = `${thDateStr}T${String(thHour).padStart(2, '0')}:00`;
+
+  let curIdx = times.findIndex(t => t >= currentSlotStr);
+  if (curIdx === -1) curIdx = 0;
 
   let maxProb = 0;
   let willRain = false;
   const timeline = [];
 
-  // ดูข้อมูล 3-4 ชั่วโมงข้างหน้า
-  for (let i = currentHour; i < Math.min(currentHour + 4, times.length); i++) {
+  // ดูชั่วโมงข้างหน้าในอนาคต (curIdx + 1 ถึง curIdx + 4)
+  for (let i = curIdx + 1; i <= Math.min(curIdx + 4, times.length - 1); i++) {
     const timeStr = times[i].split('T')[1];
-    const prob = rainProbs[i];
-    const precip = precipitations[i];
+    const prob = rainProbs[i] || 0;
+    const precip = precipitations[i] || 0;
 
     if (prob > maxProb) maxProb = prob;
     if (prob >= CONFIG.rain_probability_threshold || precip >= CONFIG.precipitation_threshold) {
@@ -69,31 +75,34 @@ function analyzeRain(weatherData) {
     });
   }
 
-  return { willRain, maxProb, timeline };
+  return { willRain, maxProb, timeline, thNow };
 }
 
 // ฟอร์แมตข้อความเตือนให้ผู้สูงอายุอ่านง่าย
 function formatMessage(analysis, location) {
+  const nowStr = analysis.thNow.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
   let msg = '';
   if (analysis.willRain) {
     msg += `🌧️ [เตือนฝนใกล้ตก!] - ${location}\n`;
+    msg += `🕒 เวลาตรวจวัดปัจจุบัน: ${nowStr} น.\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━\n`;
     msg += `⚠️ โอกาสฝนตกสูงถึง: ${analysis.maxProb}%\n`;
     msg += `📢 คำแนะนำสำหรับร้านค้า:\n`;
     msg += ` • รีบเก็บผ้าหรือสินค้าที่วางหน้าร้าน\n`;
     msg += ` • ดึงกันสาด/ผ้าใบลงมาปิดหน้าร้าน\n`;
     msg += ` • ปิดหน้าต่างให้เรียบร้อย\n\n`;
-    msg += `🕒 ช่วงเวลาที่คาดว่าฝนจะตก:\n`;
+    msg += `🕒 พยากรณ์ล่วงหน้าแต่ละชั่วโมง:\n`;
     analysis.timeline.forEach(item => {
       const icon = item.probability >= 40 ? '🌧️' : '⛅';
       msg += `  ${icon} เวลา ${item.time} น. -> โอกาสตก ${item.probability}%\n`;
     });
   } else {
     msg += `☀️ [รายงานสภาพอากาศ] - ${location}\n`;
+    msg += `🕒 เวลาตรวจวัดปัจจุบัน: ${nowStr} น.\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `ไม่มีสัญญาณฝนตกหนักในช่วง 3 ชั่วโมงนี้ (ฟ้าโปร่ง ค้าขายได้ตามปกติครับ)\n`;
+    msg += `ไม่มีสัญญาณฝนตกหนักในช่วง 3-4 ชั่วโมงข้างหน้านี้ (ค้าขายได้ตามปกติครับ)\n`;
     if (analysis.timeline.length > 0) {
-      msg += `อุณหภูมิปัจจุบัน: ${analysis.timeline[0].temp}°C | ความชื้น: ${analysis.timeline[0].humidity}%\n`;
+      msg += `อุณหภูมิ: ${analysis.timeline[0].temp}°C | ความชื้น: ${analysis.timeline[0].humidity}%\n`;
     }
   }
   return msg;
@@ -154,10 +163,10 @@ function sendLineBroadcast(messageText, token, attachRadar = false) {
   });
 }
 
-// ตรวจสอบว่าถึงเวลาส่งสรุปตอนเช้าหรือไม่ (07:00 น.)
+// ตรวจสอบว่าถึงเวลาส่งสรุปตอนเช้าหรือไม่ (07:00 น. เวลาไทย)
 function checkMorningReport(weatherData, location) {
-  const now = new Date();
-  const currentHour = now.getHours(); // Local hour
+  const thNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+  const currentHour = thNow.getHours(); // Thailand hour 07:00
   if (currentHour !== 7) return null;
 
   const hourly = weatherData.hourly;
