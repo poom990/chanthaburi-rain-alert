@@ -269,6 +269,85 @@ async function handleMessage(event) {
   const location = detectLocation(userText) || DEFAULT_LOCATION;
 
   try {
+    // คำสั่ง: ฝนจะหยุดตกตอนไหน / ฝนหยุดตอนไหน
+    if (userText.includes("หยุด") || userText.includes("ฝนหยุด")) {
+      console.log(`⏱️ วิเคราะห์เวลาฝนหยุดที่: ${location.name}`);
+      const data = await fetchWeather(location.lat, location.lon);
+      const times = data.hourly.time;
+      const probs = data.hourly.precipitation_probability;
+      const precips = data.hourly.precipitation;
+
+      const thNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+      const thHour = thNow.getHours();
+      const thMinute = thNow.getMinutes();
+      const timeNowStr = thNow.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+      const currentSlot = `${thNow.toISOString().split('T')[0]}T${String(thHour).padStart(2, '0')}:00`;
+      let curIdx = times.findIndex(t => t >= currentSlot);
+      if (curIdx === -1) curIdx = 0;
+
+      // ตรวจว่าตอนนี้ฝนกำลังตกอยู่หรือเปล่า
+      const currentProb = probs[curIdx] || 0;
+      const currentPrecip = precips[curIdx] || 0;
+      const isRainingNow = currentProb >= 40 || currentPrecip >= 0.5;
+
+      // สแกนหาชั่วโมงที่ฝนจะหยุด (โอกาสฝนต่ำกว่า 35% และปริมาณฝนน้อยกว่า 0.2 มม.)
+      let stopTime = null;
+      let stopIdx = null;
+      let timeline = [];
+
+      for (let i = curIdx; i < Math.min(curIdx + 8, times.length); i++) {
+        const tStr = times[i].split('T')[1];
+        const p = probs[i] || 0;
+        const mm = precips[i] || 0;
+        const isRaining = p >= 40 || mm >= 0.5;
+
+        let icon = '';
+        if (p >= 70) icon = '🌧️ ฝนตกหนัก';
+        else if (p >= 40) icon = '🌦️ ฝนตก';
+        else if (p >= 20) icon = '⛅ เมฆมาก/ฝนปรอย';
+        else icon = '☀️ ฟ้าเปิด/แดดออก';
+
+        timeline.push(` • เวลา ${tStr} น. ➔ ${p}% (${mm} มม.) [${icon}]`);
+
+        if (i > curIdx && p < 35 && mm < 0.2 && !stopTime) {
+          stopTime = tStr;
+          stopIdx = i;
+        }
+      }
+
+      let reply = `⏱️ [วิเคราะห์: ฝนจะหยุดตกตอนไหน?]\n`;
+      reply += `📍 ${location.name}\n`;
+      reply += `🕒 เวลาปัจจุบัน: ${timeNowStr} น.\n`;
+      reply += `━━━━━━━━━━━━━━━━━━━━\n`;
+
+      if (!isRainingNow) {
+        // ตอนนี้ฝนยังไม่ตก
+        reply += `☀️ ตอนนี้ฝนยังไม่ตกครับ (โอกาสฝนแค่ ${currentProb}%)\n`;
+        reply += `สามารถค้าขายหน้าร้านได้สบายใจ!\n\n`;
+      } else if (stopTime) {
+        // คำนวณว่าอีกกี่ชั่วโมงฝนจะหยุด
+        const hoursUntilStop = stopIdx - curIdx;
+        reply += `🌤️ คาดการณ์: ฝนจะเริ่มซาลงและหยุดตก\n`;
+        reply += `ช่วงเวลาประมาณ ${stopTime} น.\n`;
+        reply += `(อีกประมาณ ${hoursUntilStop} ชั่วโมงข้างหน้า)\n\n`;
+        reply += `📢 คำแนะนำ: รอฝนหยุดก่อนค่อยวางของหน้าร้านนะครับ\n\n`;
+      } else {
+        // ฝนตกต่อเนื่องไม่หยุดเลยในหลายชั่วโมงข้างหน้า
+        reply += `🌧️ คาดการณ์: ฝนยังมีแนวโน้มตกต่อเนื่อง\n`;
+        reply += `ไม่มีสัญญาณจะหยุดภายใน 5-6 ชม.ข้างหน้า\n\n`;
+        reply += `📢 คำแนะนำ: กางผ้าใบหรือร่มไว้ตลอดเลยนะครับ\n\n`;
+      }
+
+      reply += `📊 พยากรณ์รายชั่วโมง:\n`;
+      reply += timeline.slice(0, 6).join('\n') + `\n\n`;
+      reply += `🌐 ดูเรดาร์สด: https://weather.tmd.go.th/ryg240Loop.php\n`;
+      reply += `━━━━━━━━━━━━━━━━━━━━\n`;
+      reply += `📡 วิเคราะห์จากข้อมูลจริง: ECMWF / กรมอุตุนิยมวิทยา`;
+
+      replyMessage(replyToken, [{ type: "text", text: reply }]);
+      return;
+    }
+
     // คำสั่ง: เช็กฝน / ฝนตกไหม
     if (userText.includes("เช็กฝน") || userText.includes("ฝน") || userText.includes("ตกไหม")) {
       console.log(`⚡ เช็กฝนที่: ${location.name}`);
