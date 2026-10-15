@@ -298,7 +298,10 @@ async function handleMessage(event) {
                 `• 🟧🟥 ส้ม/แดง = ฝนตกหนักมาก + ลมแรง ⚠️\n\n` +
                 `🌐 ลิงก์ตรงหน้าเรดาร์กรมอุตุฯ (ดูภาพเคลื่อนไหว):\n` +
                 `👉 https://weather.tmd.go.th/ryg240Loop.php\n` +
-                `👉 https://weather.tmd.go.th/ryg.php`
+                `👉 https://weather.tmd.go.th/ryg.php\n\n` +
+                `━━━━━━━━━━━━━━━━━━━━\n` +
+                `⭐ ช่วยประเมินโครงงานของ นายธนพนธ์ วิสุขะ:\n` +
+                `👉 https://chanthaburi-rain-alert.onrender.com/feedback`
         },
         { type: "image", originalContentUrl: RADAR_URL, previewImageUrl: RADAR_URL }
       ]);
@@ -317,10 +320,56 @@ async function handleMessage(event) {
   }
 }
 
+// URL หน้าแบบประเมินโครงงาน (บน Render)
+const FEEDBACK_URL = "https://chanthaburi-rain-alert.onrender.com/feedback";
+
 // ==========================================
-// เซิร์ฟเวอร์ Webhook รับข้อความจาก LINE
+// เซิร์ฟเวอร์ Webhook รับข้อความจาก LINE & เสิร์ฟหน้าประเมิน
 // ==========================================
+const fs = require('fs');
+const path = require('path');
+
 const server = http.createServer(async (req, res) => {
+  // 1. เส้นทางหน้าแบบประเมินผล
+  if (req.method === 'GET' && (req.url === '/feedback' || req.url === '/eval')) {
+    const filePath = path.join(__dirname, 'feedback.html');
+    fs.readFile(filePath, 'utf8', (err, html) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end("ไม่พบหน้าแบบประเมิน");
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    });
+    return;
+  }
+
+  // 2. รับข้อมูลคะแนนประเมินเข้ามาบันทึก
+  if (req.method === 'POST' && req.url === '/api/feedback') {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      try {
+        const newFeedback = JSON.parse(body);
+        const logPath = path.join(__dirname, 'evaluations.json');
+        let records = [];
+        if (fs.existsSync(logPath)) {
+          try { records = JSON.parse(fs.readFileSync(logPath, 'utf8')); } catch (e) {}
+        }
+        records.push(newFeedback);
+        fs.writeFileSync(logPath, JSON.stringify(records, null, 2));
+        console.log("⭐ บันทึกผลประเมินใหม่เรียบร้อย:", newFeedback);
+      } catch (err) {
+        console.error("Error saving feedback:", err);
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'success' }));
+    });
+    return;
+  }
+
+  // 3. Webhook รับข้อความ LINE
   if (req.method === 'POST' && req.url === '/webhook') {
     let body = '';
     req.on('data', chunk => body += chunk);
@@ -340,8 +389,8 @@ const server = http.createServer(async (req, res) => {
       }
     });
   } else {
-    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end("Chanthaburi Weather Bot ทำงานปกติครับ! พิมพ์ 'ช่วย' ใน LINE เพื่อดูคำสั่งครับ");
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(`<h3>ระบบพยากรณ์อากาศและเตือนฝน จ.จันทบุรี (โครงงาน นายธนพนธ์ วิสุขะ) ทำงานปกติครับ</h3><p><a href="/feedback">คลิกที่นี่เพื่อไปหน้าแบบประเมินโครงงาน</a></p>`);
   }
 });
 

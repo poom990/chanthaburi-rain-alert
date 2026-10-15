@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>แบบประเมินโครงงานพอร์ตโฟลิโอ - นายธนพนธ์ วิสุขะ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Kanit', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px 15px;
+      color: #333;
+    }
+
+    .card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 520px;
+      border-radius: 24px;
+      padding: 30px 25px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 8px;
+      background: linear-gradient(90deg, #00c6ff, #0072ff);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #e1f0ff;
+      color: #0072ff;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 30px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a2a3a;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+
+    .author {
+      font-size: 15px;
+      color: #556980;
+      font-weight: 400;
+    }
+
+    .author strong {
+      color: #0072ff;
+    }
+
+    .form-group {
+      margin-bottom: 22px;
+    }
+
+    label {
+      display: block;
+      font-size: 15px;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+
+    /* Radio buttons custom */
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .radio-label {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 14px;
+      color: #334155;
+    }
+
+    .radio-label:hover {
+      border-color: #0072ff;
+      background: #f0f7ff;
+    }
+
+    .radio-label input {
+      margin-right: 12px;
+      accent-color: #0072ff;
+      transform: scale(1.2);
+    }
+
+    /* Stars rating */
+    .star-rating {
+      display: flex;
+      flex-direction: row-reverse;
+      justify-content: center;
+      gap: 8px;
+      margin: 10px 0;
+    }
+
+    .star-rating input {
+      display: none;
+    }
+
+    .star-rating label {
+      font-size: 38px;
+      color: #cbd5e1;
+      cursor: pointer;
+      transition: color 0.2s;
+      margin: 0;
+    }
+
+    .star-rating input:checked ~ label,
+    .star-rating label:hover,
+    .star-rating label:hover ~ label {
+      color: #ffb703;
+    }
+
+    textarea {
+      width: 100%;
+      height: 95px;
+      padding: 12px 14px;
+      border: 2px solid #e2e8f0;
+      border-radius: 14px;
+      font-size: 14px;
+      resize: none;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus {
+      border-color: #0072ff;
+      background: #fbfdff;
+    }
+
+    .btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, #0072ff, #00c6ff);
+      color: #ffffff;
+      font-size: 17px;
+      font-weight: 600;
+      padding: 14px;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(0, 114, 255, 0.35);
+      transition: all 0.2s ease;
+      margin-top: 5px;
+    }
+
+    .btn-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 25px rgba(0, 114, 255, 0.45);
+    }
+
+    /* Success screen */
+    .thank-you {
+      display: none;
+      text-align: center;
+      padding: 20px 10px;
+    }
+
+    .thank-you .icon {
+      font-size: 70px;
+      margin-bottom: 15px;
+      animation: pop 0.5s ease;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0.5); opacity: 0; }
+      80% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .thank-you h2 {
+      font-size: 22px;
+      color: #1a2a3a;
+      margin-bottom: 12px;
+    }
+
+    .thank-you p {
+      font-size: 15px;
+      color: #475569;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .project-card {
+      background: #f1f7ff;
+      border: 1px dashed #0072ff;
+      border-radius: 16px;
+      padding: 15px;
+      margin-top: 15px;
+      font-size: 13px;
+      color: #1e3a8a;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div id="survey-form">
+      <div class="header">
+        <span class="badge">TCAS Portfolio Evaluation</span>
+        <h1>โครงงานใส่พอร์ตโฟลิโอ<br>ระบบเตือนฝน จ.จันทบุรี</h1>
+        <div class="author">ผู้พัฒนา: <strong>นายธนพนธ์ วิสุขะ</strong></div>
+      </div>
+
+      <form id="evaluationForm">
+        <!-- คำถามที่ 1 -->
+        <div class="form-group">
+          <label>1. คิดว่าระบบเตือนฝนนี้สามารถใช้งานได้จริงในชีวิตประจำวันไหมครับ?</label>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="practicality" value="ใช้งานได้จริงมาก ช่วยได้เยอะ" required>
+              👍 ใช้งานได้จริงมาก ช่วยเตรียมตัวและเก็บของได้ทัน
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="practicality" value="ใช้งานได้ปานกลาง">
+              👌 ใช้งานได้ปานกลาง มีประโยชน์ในระดับหนึ่ง
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="practicality" value="ต้องปรับปรุงเพิ่มเติม">
+              🔧 ยังต้องปรับปรุงเพิ่มเติม
+            </label>
+          </div>
+        </div>
+
+        <!-- คำถามที่ 2 -->
+        <div class="form-group">
+          <label style="text-align: center;">2. ให้คะแนนความพึงพอใจต่อระบบนี้:</label>
+          <div class="star-rating">
+            <input type="radio" id="star5" name="rating" value="5" required><label for="star5">★</label>
+            <input type="radio" id="star4" name="rating" value="4"><label for="star4">★</label>
+            <input type="radio" id="star3" name="rating" value="3"><label for="star3">★</label>
+            <input type="radio" id="star2" name="rating" value="2"><label for="star2">★</label>
+            <input type="radio" id="star1" name="rating" value="1"><label for="star1">★</label>
+          </div>
+        </div>
+
+        <!-- คำถามที่ 3 -->
+        <div class="form-group">
+          <label>3. มีข้อเสนอแนะ หรืออยากให้ระบบพัฒนาเพิ่มเติมอะไรอีกไหมครับ?</label>
+          <textarea name="feedback" placeholder="เช่น อยากให้แจ้งเตือนตอนเช้ากี่โมง, เพิ่มอำเภอไหน, หรือปรับคำพูดแบบไหน บอกได้เลยครับ..."></textarea>
+        </div>
+
+        <button type="submit" class="btn-submit">ส่งแบบประเมินความพึงพอใจ ✨</button>
+      </form>
+    </div>
+
+    <!-- หน้าขอบคุณหลังประเมินเสร็จ -->
+    <div id="thank-you-screen" class="thank-you">
+      <div class="icon">💖</div>
+      <h2>ขอบพระคุณจากใจจริงครับ!</h2>
+      <p>
+        ขอบคุณมากๆ ที่สละเวลาเข้ามาช่วยทดสอบและประเมินระบบของ <strong>"เด็กตาดำๆ คนนี้"</strong> ครับ 🙏<br>
+        ทุกคะแนนและข้อเสนอแนะมีความหมายมากต่อการยื่นเข้าศึกษาต่อในคณะวิศวกรรมศาสตร์ครับ
+      </p>
+
+      <div class="project-card">
+        <strong>📂 ชิ้นงานโครงงาน Portfolio:</strong><br>
+        ระบบพยากรณ์และแจ้งเตือนสภาพอากาศอัจฉริยะสำหรับร้านค้าชุมชน ผ่าน LINE Messaging API<br>
+        <strong>พัฒนาโดย:</strong> นายธนพนธ์ วิสุขะ
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('evaluationForm');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const data = {
+        practicality: formData.get('practicality'),
+        rating: formData.get('rating'),
+        feedback: formData.get('feedback') || '-',
+        timestamp: new Date().toLocaleString('th-TH')
+      };
+
+      try {
+        await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+      } catch (err) {
+        console.log('Submitted locally');
+      }
+
+      document.getElementById('survey-form').style.display = 'none';
+      document.getElementById('thank-you-screen').style.display = 'block';
+    });
+  </script>
+</body>
+</html>
