@@ -78,32 +78,78 @@ function analyzeRain(weatherData) {
   return { willRain, maxProb, timeline, thNow };
 }
 
-// ฟอร์แมตข้อความเตือนให้ผู้สูงอายุอ่านง่าย
+// ฟังก์ชันแปลระดับฝนเป็นภาษาชาวบ้านเข้าใจง่าย
+function describeRainLevel(prob, precip) {
+  if (prob < 25 && precip < 0.1) {
+    return { text: "☀️ ไม่ตก (ฟ้าโปร่ง/แดดดี)", level: "none" };
+  } else if (prob < 45 && precip < 0.5) {
+    return { text: "🌦️ มีฝนปรอยๆ ละอองบางๆ (ไม่เปียกมาก)", level: "drizzle" };
+  } else if (prob >= 45 && precip < 2.5) {
+    return { text: "🌧️ ตกไม่แรง แป๊บๆ หยุด (ฝนผ่านสั้นๆ)", level: "light" };
+  } else {
+    return { text: "⛈️ ตกหนัก มีลมแรง (ตกยาว/ต้องหลบ)", level: "heavy" };
+  }
+}
+
+// สร้างคำแนะนำแยกตามอาชีพของคนจันทบุรี
+function getOccupationAdvice(maxProb, maxPrecip) {
+  let advice = `👨‍🌾 คำแนะนำเพื่อพี่น้องชาวจันท์:\n`;
+
+  if (maxProb < 35 && maxPrecip < 0.2) {
+    advice += `• 🌲 ชาวสวนยาง: กรีดยางได้ปกติ หน้ายางไม่บูด น้ำยางไม่เสีย\n`;
+    advice += `• 🍈 สวนทุเรียน/ผลไม้: พ่นยา ใส่ปุ๋ย ตัดแต่งกิ่งได้เต็มที่ ยาไม่โดนชะล้าง\n`;
+    advice += `• 🛒 ค้าขาย/ตลาด: วางของหน้าร้านได้โล่งสบาย ค้าขายราบรื่น\n`;
+    advice += `• 🔨 งานรับจ้าง/กลางแจ้ง: ทำงานเทปูน ก่อสร้าง ขนส่ง ได้สบายตลอดช่วงนี้ครับ`;
+  } else if (maxProb < 55 && maxPrecip < 2.0) {
+    advice += `• 🌲 ชาวสวนยาง: ระวังละอองฝนเกาะหน้ายาง แนะนำสังเกตหัวกะโหลกก่อนกรีด\n`;
+    advice += `• 🍈 สวนทุเรียน/ผลไม้: งดพ่นสารเคมีชั่วคราว ฝนอาจชะล้างยา แต่เข้าตัดแต่งสวนได้\n`;
+    advice += `• 🛒 ค้าขาย/ตลาด: เตรียมดึงผ้าใบกันสาดลงมาคุมไว้ สินค้าไม่เสียหายมาก\n`;
+    advice += `• 🔨 งานรับจ้าง/กลางแจ้ง: งานฉาบปูน/ทาสีควรเลี่ยง งานช่างในร่มทำได้ปกติครับ`;
+  } else {
+    advice += `• 🌲 ชาวสวนยาง: ⚠️ งดกรีดยางเด็ดขาด! ฝนชะน้ำยางเสียหายแน่นอน\n`;
+    advice += `• 🍈 สวนทุเรียน/ผลไม้: ⚠️ ห้ามพ่นยา/ใส่ปุ๋ย ระวังลมกระโชกแรงกิ่งฉีกขาด\n`;
+    advice += `• 🛒 ค้าขาย/ตลาด: ⚠️ รีบเก็บของเข้าที่ร่ม ดึงผ้าใบมัดให้แน่นหนาทันที\n`;
+    advice += `• 🔨 งานรับจ้าง/กลางแจ้ง: ⚠️ หยุดงานกลางแจ้งและที่สูง หลบเข้าที่กำบังปลอดภัยครับ`;
+  }
+  return advice;
+}
+
+// ฟอร์แมตข้อความเตือนให้เข้าใจง่ายและตรงกลุ่มอาชีพ
 function formatMessage(analysis, location) {
   const nowStr = analysis.thNow.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  const overall = describeRainLevel(analysis.maxProb, analysis.timeline[0] ? analysis.timeline[0].precipitation : 0);
   let msg = '';
+
   if (analysis.willRain) {
-    msg += `🌧️ [เตือนฝนใกล้ตก!] - ${location}\n`;
-    msg += `🕒 เวลาตรวจวัดปัจจุบัน: ${nowStr} น.\n`;
+    msg += `🌧️ [เตือนฝนรายชั่วโมง] - ${location}\n`;
+    msg += `🕒 เวลาตรวจวัด: ${nowStr} น.\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `⚠️ โอกาสฝนตกสูงถึง: ${analysis.maxProb}%\n`;
-    msg += `📢 คำแนะนำสำหรับร้านค้า:\n`;
-    msg += ` • รีบเก็บผ้าหรือสินค้าที่วางหน้าร้าน\n`;
-    msg += ` • ดึงกันสาด/ผ้าใบลงมาปิดหน้าร้าน\n`;
-    msg += ` • ปิดหน้าต่างให้เรียบร้อย\n\n`;
-    msg += `🕒 พยากรณ์ล่วงหน้าแต่ละชั่วโมง:\n`;
+    msg += `📢 สภาพฝนที่คาดหมาย: **${overall.text}**\n`;
+    msg += `• โอกาสฝนตกสูงสุด: ${analysis.maxProb}%\n\n`;
+
+    msg += `🕒 แจกแจงทีละชั่วโมงข้างหน้า:\n`;
     analysis.timeline.forEach(item => {
-      const icon = item.probability >= 40 ? '🌧️' : '⛅';
-      msg += `  ${icon} เวลา ${item.time} น. -> โอกาสตก ${item.probability}%\n`;
+      const desc = describeRainLevel(item.probability, item.precipitation);
+      msg += ` • ${item.time} น. ➔ ${desc.text} (${item.probability}%)\n`;
     });
+
+    msg += `\n━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += getOccupationAdvice(analysis.maxProb, 1.5);
   } else {
     msg += `☀️ [รายงานสภาพอากาศ] - ${location}\n`;
-    msg += `🕒 เวลาตรวจวัดปัจจุบัน: ${nowStr} น.\n`;
+    msg += `🕒 เวลาตรวจวัด: ${nowStr} น.\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `ไม่มีสัญญาณฝนตกหนักในช่วง 3-4 ชั่วโมงข้างหน้านี้ (ค้าขายได้ตามปกติครับ)\n`;
-    if (analysis.timeline.length > 0) {
-      msg += `อุณหภูมิ: ${analysis.timeline[0].temp}°C | ความชื้น: ${analysis.timeline[0].humidity}%\n`;
-    }
+    msg += `📢 สภาพอากาศ: **${overall.text}**\n`;
+    msg += `ไม่มีสัญญาณฝนตกหนักในช่วง 3-4 ชั่วโมงข้างหน้านี้ ค้าขายและทำสวนได้สบายใจครับ\n\n`;
+
+    msg += `🕒 แจกแจงทีละชั่วโมงข้างหน้า:\n`;
+    analysis.timeline.forEach(item => {
+      const desc = describeRainLevel(item.probability, item.precipitation);
+      msg += ` • ${item.time} น. ➔ ${desc.text} (${item.probability}%)\n`;
+    });
+
+    msg += `\n━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += getOccupationAdvice(analysis.maxProb, 0);
   }
   return msg;
 }

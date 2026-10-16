@@ -107,59 +107,90 @@ function analyzeWeather(data) {
   return { willRain, maxProb, maxPrecip, currentTemp, currentHumidity, currentWind, timeline, thNow };
 }
 
+// ฟังก์ชันแปลระดับฝนเป็นภาษาชาวบ้านเข้าใจง่าย
+function describeRainLevel(prob, precip) {
+  if (prob < 25 && precip < 0.1) {
+    return { text: "☀️ ไม่ตก (ฟ้าโปร่ง/แดดดี)", level: "none" };
+  } else if (prob < 45 && precip < 0.5) {
+    return { text: "🌦️ มีฝนปรอยๆ ละอองบางๆ (ไม่เปียกมาก)", level: "drizzle" };
+  } else if (prob >= 45 && precip < 2.5) {
+    return { text: "🌧️ ตกไม่แรง แป๊บๆ หยุด (ฝนผ่านสั้นๆ)", level: "light" };
+  } else {
+    return { text: "⛈️ ตกหนัก มีลมแรง (ตกยาว/ต้องหลบ)", level: "heavy" };
+  }
+}
+
+// สร้างคำแนะนำแยกตามอาชีพของคนจันทบุรี
+function getOccupationAdvice(maxProb, maxPrecip) {
+  let advice = `👨‍🌾 คำแนะนำเพื่อพี่น้องชาวจันท์:\n`;
+
+  if (maxProb < 35 && maxPrecip < 0.2) {
+    // กรณีฝนไม่ตก / ฟ้าเปิด
+    advice += `• 🌲 ชาวสวนยาง: กรีดยางได้ปกติ หน้ายางไม่บูด น้ำยางไม่เสีย\n`;
+    advice += `• 🍈 สวนทุเรียน/ผลไม้: พ่นยา ใส่ปุ๋ย ตัดแต่งกิ่งได้เต็มที่ ยาไม่โดนชะล้าง\n`;
+    advice += `• 🛒 ค้าขาย/ตลาด: วางของหน้าร้านได้โล่งสบาย ค้าขายราบรื่น\n`;
+    advice += `• 🔨 งานรับจ้าง/กลางแจ้ง: ทำงานเทปูน ก่อสร้าง ขนส่ง ได้สบายตลอดช่วงนี้ครับ`;
+  } else if (maxProb < 55 && maxPrecip < 2.0) {
+    // กรณีฝนปรอย หรือ ตกไม่แรงแป๊บๆ หยุด
+    advice += `• 🌲 ชาวสวนยาง: ระวังละอองฝนเกาะหน้ายาง แนะนำสังเกตหัวกะโหลกก่อนกรีด\n`;
+    advice += `• 🍈 สวนทุเรียน/ผลไม้: งดพ่นสารเคมีชั่วคราว ฝนอาจชะล้างยา แต่เข้าตัดแต่งสวนได้\n`;
+    advice += `• 🛒 ค้าขาย/ตลาด: เตรียมดึงผ้าใบกันสาดลงมาคุมไว้ สินค้าไม่เสียหายมาก\n`;
+    advice += `• 🔨 งานรับจ้าง/กลางแจ้ง: งานฉาบปูน/ทาสีควรเลี่ยง งานช่างในร่มทำได้ปกติครับ`;
+  } else {
+    // กรณีฝนตกหนัก
+    advice += `• 🌲 ชาวสวนยาง: ⚠️ งดกรีดยางเด็ดขาด! ฝนชะน้ำยางเสียหายแน่นอน\n`;
+    advice += `• 🍈 สวนทุเรียน/ผลไม้: ⚠️ ห้ามพ่นยา/ใส่ปุ๋ย ระวังลมกระโชกแรงกิ่งฉีกขาด\n`;
+    advice += `• 🛒 ค้าขาย/ตลาด: ⚠️ รีบเก็บของเข้าที่ร่ม ดึงผ้าใบมัดให้แน่นหนาทันที\n`;
+    advice += `• 🔨 งานรับจ้าง/กลางแจ้ง: ⚠️ หยุดงานกลางแจ้งและที่สูง หลบเข้าที่กำบังปลอดภัยครับ`;
+  }
+  return advice;
+}
+
 // ==========================================
 // สร้างข้อความตอบกลับสำหรับ "เช็กฝน" หรือ "ฝนตกไหม"
 // ==========================================
 function buildRainCheckReply(analysis, locationName) {
   const timeStr = analysis.thNow.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  const overall = describeRainLevel(analysis.maxProb, analysis.maxPrecip);
   let msg = '';
 
   if (analysis.willRain) {
     msg += `🌧️ [เตือนฝนรายชั่วโมง] - ${locationName}\n`;
-    msg += `🕒 เวลาที่ตรวจตอนนี้: ${timeStr} น.\n`;
+    msg += `🕒 เวลาตรวจวัด: ${timeStr} น.\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `⚠️ สรุป: มีแนวโน้มฝนตกในอีกไม่กี่ชั่วโมงข้างหน้านี้!\n`;
-    msg += `• โอกาสฝนสูงสุด: ${analysis.maxProb}%\n`;
-    msg += `• ปริมาณน้ำฝนสูงสุด: ${analysis.maxPrecip.toFixed(1)} มม. (mm)\n`;
+    msg += `📢 สภาพฝนที่คาดหมาย: **${overall.text}**\n`;
+    msg += `• โอกาสฝนตก: ${analysis.maxProb}%\n`;
+    msg += `• ปริมาณน้ำฝน: ${analysis.maxPrecip.toFixed(1)} มม.\n`;
     msg += `• อุณหภูมิ: ${analysis.currentTemp}°C | ลม: ${analysis.currentWind} กม./ชม.\n\n`;
 
-    msg += `🕒 โอกาสฝนในแต่ละชั่วโมงข้างหน้า:\n`;
-    let rainTimes = [];
+    msg += `🕒 แจกแจงทีละชั่วโมงข้างหน้า:\n`;
     analysis.timeline.forEach(item => {
-      let status = '';
-      if (item.prob >= 70) {
-        status = '🌧️ ตกค่อนข้างแน่';
-        rainTimes.push(item.time);
-      } else if (item.prob >= 40) {
-        status = '🌦️ มีโอกาสตก';
-        rainTimes.push(item.time);
-      } else {
-        status = '⛅ โอกาสน้อย/ฟ้าครึ้ม';
-      }
-      msg += ` • เวลา ${item.time} น. ➔ โอกาส ${item.prob}% (ฝน ${item.precip} มม.) [${status}]\n`;
+      const desc = describeRainLevel(item.prob, item.precip);
+      msg += ` • ${item.time} น. ➔ ${desc.text} (${item.prob}%)\n`;
     });
 
-    msg += `\n📢 คำแนะนำสำหรับร้านค้า:\n`;
-    if (rainTimes.length > 0) {
-      msg += `⚠️ ควรเตรียมดึงผ้าใบ/เก็บของหน้าร้านก่อนเวลา ${rainTimes[0]} น. นะครับ!\n\n`;
-    } else {
-      msg += `เตรียมผ้าใบหน้าร้านไว้เผื่อฝนตกกระทันหันนะครับ\n\n`;
-    }
+    msg += `\n━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += getOccupationAdvice(analysis.maxProb, analysis.maxPrecip) + `\n\n`;
 
     msg += `🌐 ดูเรดาร์สดแบบเคลื่อนไหว:\n`;
     msg += `👉 https://weather.tmd.go.th/ryg240Loop.php\n`;
   } else {
     msg += `☀️ [รายงานอากาศ] - ${locationName}\n`;
-    msg += `🕒 เวลาที่ตรวจตอนนี้: ${timeStr} น.\n`;
+    msg += `🕒 เวลาตรวจวัด: ${timeStr} น.\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `✅ สบายใจได้ครับ อีก 3-4 ชั่วโมงข้างหน้านี้ไม่มีฝนตกหนัก\n\n`;
-    msg += `🕒 ตรวจสอบทีละชั่วโมง:\n`;
+    msg += `📢 สภาพอากาศ: **${overall.text}**\n`;
+    msg += `✅ ช่วง 3-4 ชั่วโมงข้างหน้านี้ไม่มีฝนตกหนัก ค้าขายและทำสวนได้สบายใจ\n\n`;
+
+    msg += `🕒 แจกแจงทีละชั่วโมงข้างหน้า:\n`;
     analysis.timeline.forEach(item => {
-      msg += ` • เวลา ${item.time} น. ➔ โอกาสตก ${item.prob}% (ฟ้าโปร่ง ⛅)\n`;
+      const desc = describeRainLevel(item.prob, item.precip);
+      msg += ` • ${item.time} น. ➔ ${desc.text} (${item.prob}%)\n`;
     });
-    msg += `\n• อุณหภูมิปัจจุบัน: ${analysis.currentTemp}°C\n`;
-    msg += `• ความชื้นสัมพัทธ์: ${analysis.currentHumidity}%\n\n`;
-    msg += `ค้าขายหน้าร้านได้ราบรื่นตลอดช่วงนี้เลยครับแม่! 👍\n\n`;
+
+    msg += `\n• อุณหภูมิปัจจุบัน: ${analysis.currentTemp}°C | ความชื้น: ${analysis.currentHumidity}%\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += getOccupationAdvice(analysis.maxProb, analysis.maxPrecip) + `\n\n`;
+
     msg += `🌐 ลิงก์เรดาร์กรมอุตุฯ: https://weather.tmd.go.th/ryg.php\n`;
   }
 
