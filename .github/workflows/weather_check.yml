@@ -3,7 +3,7 @@ name: Chanthaburi Rain Alert Auto-Check
 on:
   schedule:
     # รันอัตโนมัติตรวจเรดาร์ทุกๆ 1 ชั่วโมง (24 ชั่วโมงฟรี)
-    - cron: '0 * * * *'
+    - cron: - cron: '0 0,5,9 * * *'
   workflow_dispatch: # สร้างปุ่มให้กดทดสอบบน Cloud ได้ทันที
 
 jobs:
